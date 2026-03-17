@@ -825,11 +825,12 @@
 
         // Download import template (with UTF-8 BOM for Excel compatibility)
         function downloadTemplate() {
-            const template = `\uFEFF姓名,手机号,备注
-张三,13800138000,新郎朋友
-李四,13900139000,新娘同事
-王五,,亲戚
-赵六,13700137000,新郎同学`;
+            const BOM = '\uFEFF';
+            const template = BOM + '姓名,手机号,备注\n' +
+                '张三,13800138000,新郎朋友\n' +
+                '李四,13900139000,新娘同事\n' +
+                '王五,,亲戚\n' +
+                '赵六,13700137000,新郎同学';
             
             const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
