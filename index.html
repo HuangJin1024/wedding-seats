@@ -429,6 +429,7 @@
     <div class="toolbar">
         <button class="btn btn-primary" onclick="openModal('guest')">➕ 添加宾客</button>
         <button class="btn btn-primary" onclick="openModal('table')">🪑 添加桌位</button>
+        <button class="btn btn-secondary" onclick="downloadTemplate()">📥 下载模板</button>
         <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
         <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
         <button class="btn btn-secondary" onclick="document.getElementById('batchImportFile').click()">📋 批量导入</button>
@@ -820,6 +821,24 @@
             };
             reader.readAsText(file);
             input.value = '';
+        }
+
+        // Download import template
+        function downloadTemplate() {
+            const template = `姓名,手机号,备注
+张三,13800138000,新郎朋友
+李四,13900139000,新娘同事
+王五,,亲戚
+赵六,13700137000,新郎同学`;
+            
+            const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '宾客导入模板.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('模板已下载');
         }
 
         // Batch import from CSV (format: 姓名,手机号,备注)
