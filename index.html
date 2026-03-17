@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>婚礼宴席排座</title>
+    <style>
+        :root {
+            --primary: #d4a574;
+            --primary-dark: #b8956a;
+            --bg: #faf8f5;
+            --card-bg: #ffffff;
+            --text: #333;
+            --text-light: #666;
+            --border: #e8e4df;
+            --danger: #e74c3c;
+            --success: #27ae60;
+            --seat-empty: #f0ebe5;
+            --seat-filled: #d4a574;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 24px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .stats span {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 12px;
+            border-radius: 16px;
+        }
+
+        /* Toolbar */
+        .toolbar {
+            background: var(--card-bg);
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: white;
+        }
+
+        /* Main Layout */
+        .main {
+            display: flex;
+            height: calc(100vh - 140px);
+            overflow: hidden;
+        }
+
+        /* Guest Panel */
+        .guest-panel {
+            width: 320px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .search-box:focus {
+            border-color: var(--primary);
+        }
+
+        .guest-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .guest-item {
+            padding: 12px 14px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .guest-item:hover {
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .guest-item.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .guest-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .guest-phone {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .guest-note {
+            font-size: 12px;
+            color: var(--text-light);
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .guest-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .guest-actions button {
+            padding: 4px 8px;
+            font-size: 11px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: var(--border);
+        }
+
+        .guest-actions .delete-btn {
+            background: #fee;
+            color: var(--danger);
+        }
+
+        /* Table Area */
+        .table-area {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: var(--bg);
+        }
+
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .table-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 140px;
+            border: 2px dashed var(--border);
+            transition: all 0.2s;
+        }
+
+        .table-card.drag-over {
+            border-color: var(--primary);
+            background: #fef9f4;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--primary-dark);
+        }
+
+        .table-capacity {
+            font-size: 12px;
+            color: var(--text-light);
+            background: var(--seat-empty);
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .table-capacity.full {
+            background: var(--success);
+            color: white;
+        }
+
+        .table-guests {
+            min-height: 60px;
+        }
+
+        .table-guest-item {
+            font-size: 13px;
+            padding: 6px 10px;
+            background: var(--bg);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-guest-item .remove-btn {
+            cursor: pointer;
+            color: var(--danger);
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .table-guest-item:hover .remove-btn {
+            opacity: 1;
+        }
+
+        .empty-table {
+            color: var(--text-light);
+            font-size: 13px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            transform: translateY(20px);
+            transition: transform 0.3s;
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+
+        .modal h2 {
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 2000;
+            transition: transform 0.3s;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-light);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main {
+                flex-direction: column;
+            }
+            
+            .guest-panel {
+                width: 100%;
+                height: 40%;
+            }
+            
+            .table-area {
+                height: 60%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>💒 婚礼宴席排座</h1>
+        <div class="stats">
+            <span>📋 总宾客: <b id="totalGuests">0</b> 人</span>
+            <span>✅ 已安排: <b id="seatedGuests">0</b> 人</span>
+            <span>🪑 待安排: <b id="unseatedGuests">0</b> 人</span>
+        </div>
+    </header>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <button class="btn btn-primary" onclick="openModal('guest')">➕ 添加宾客</button>
+        <button class="btn btn-primary" onclick="openModal('table')">🪑 添加桌位</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">📥 导入</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(this)">
+        <button class="btn btn-secondary" onclick="document.getElementById('batchImportFile').click()">📋 批量导入</button>
+        <input type="file" id="batchImportFile" accept=".csv,.txt" style="display:none" onchange="batchImport(this)">
+        <button class="btn btn-secondary" onclick="exportPDF()">📄 导出PDF</button>
+        <button class="btn btn-secondary" onclick="exportData()">💾 导出JSON</button>
+        <button class="btn btn-secondary" onclick="clearAll()">🗑️ 清空数据</button>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <!-- Guest Panel -->
+        <aside class="guest-panel">
+            <div class="panel-header">
+                <input type="text" class="search-box" placeholder="🔍 搜索宾客..." id="searchGuest" oninput="renderGuestList()">
+            </div>
+            <div class="guest-list" id="guestList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">👤</div>
+                    <p>暂无待安排宾客</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Table Area -->
+        <main class="table-area">
+            <div class="table-grid" id="tableGrid">
+                <!-- Tables will be rendered here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Guest Modal -->
+    <div class="modal-overlay" id="guestModal">
+        <div class="modal">
+            <h2>添加宾客</h2>
+            <form id="guestForm" onsubmit="saveGuest(event)">
+                <div class="form-group">
+                    <label>姓名 *</label>
+                    <input type="text" name="name" required placeholder="请输入姓名">
+                </div>
+                <div class="form-group">
+                    <label>手机号</label>
+                    <input type="tel" name="phone" placeholder="请输入手机号">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <input type="text" name="note" placeholder="如: 新郎朋友">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('guest')">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Table Modal -->
+    <div class="modal-overlay" id="tableModal">
+        <div class="modal">
+            <h2>添加桌位</h2>
+            <form id="tableForm" onsubmit="saveTable(event)">
+                <div class="form-group">
+                    <label>桌号 *</label>
+                    <input type="text" name="name" required placeholder="如: 1号桌 或 A桌">
+                </div>
+                <div class="form-group">
+                    <label>容纳人数 *</label>
+                    <input type="number" name="capacity" required placeholder="如: 10" min="1" value="10">
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('table')">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Data
+        let guests = [];
+        let tables = [];
+
+        // Load data from localStorage
+        function loadData() {
+            const savedGuests = localStorage.getItem('wedding_guests');
+            const savedTables = localStorage.getItem('wedding_tables');
+            
+            if (savedGuests) guests = JSON.parse(savedGuests);
+            if (savedTables) tables = JSON.parse(savedTables);
+            
+            // If no tables, create default
+            if (tables.length === 0) {
+                tables = [
+                    { id: 1, name: '1号桌', capacity: 10, guests: [] },
+                    { id: 2, name: '2号桌', capacity: 10, guests: [] },
+                    { id: 3, name: '3号桌', capacity: 10, guests: [] }
+                ];
+                saveData();
+            }
+            
+            render();
+        }
+
+        // Save data to localStorage
+        function saveData() {
+            localStorage.setItem('wedding_guests', JSON.stringify(guests));
+            localStorage.setItem('wedding_tables', JSON.stringify(tables));
+            render();
+        }
+
+        // Render all
+        function render() {
+            renderStats();
+            renderGuestList();
+            renderTables();
+        }
+
+        // Render stats
+        function renderStats() {
+            const total = guests.length;
+            const seated = tables.reduce((sum, t) => sum + t.guests.length, 0);
+            const unseated = total - seated;
+            
+            document.getElementById('totalGuests').textContent = total;
+            document.getElementById('seatedGuests').textContent = seated;
+            document.getElementById('unseatedGuests').textContent = unseated;
+        }
+
+        // Render guest list
+        function renderGuestList() {
+            const search = document.getElementById('searchGuest').value.toLowerCase();
+            const unseatedGuests = guests.filter(g => !g.tableId);
+            
+            const filtered = search 
+                ? unseatedGuests.filter(g => g.name.toLowerCase().includes(search) || (g.phone && g.phone.includes(search)))
+                : unseatedGuests;
+
+            const container = document.getElementById('guestList');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👤</div>
+                        <p>${search ? '没有匹配的宾客' : '暂无待安排宾客'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filtered.map(guest => `
+                <div class="guest-item" draggable="true" 
+                    ondragstart="dragGuest(event, ${guest.id})"
+                    ondragend="dragEnd(event)">
+                    <div class="guest-name">${guest.name}</div>
+                    ${guest.phone ? `<div class="guest-phone">📱 ${guest.phone}</div>` : ''}
+                    ${guest.note ? `<div class="guest-note">📝 ${guest.note}</div>` : ''}
+                    <div class="guest-actions">
+                        <button onclick="editGuest(${guest.id})">编辑</button>
+                        <button class="delete-btn" onclick="deleteGuest(${guest.id})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render tables
+        function renderTables() {
+            const container = document.getElementById('tableGrid');
+            
+            container.innerHTML = tables.map(table => {
+                const filled = table.guests.length;
+                const isFull = filled >= table.capacity;
+                
+                return `
+                    <div class="table-card" 
+                        ondragover="dragOver(event)" 
+                        ondragleave="dragLeave(event)"
+                        ondrop="dropGuest(event, ${table.id})">
+                        <div class="table-header">
+                            <div class="table-name">${table.name}</div>
+                            <div class="table-capacity ${isFull ? 'full' : ''}">${filled}/${table.capacity}</div>
+                        </div>
+                        <div class="table-guests">
+                            ${table.guests.length === 0 
+                                ? '<div class="empty-table">拖拽宾客到此</div>' 
+                                : table.guests.map(gid => {
+                                    const g = guests.find(x => x.id === gid);
+                                    return g ? `
+                                        <div class="table-guest-item">
+                                            <span>${g.name}</span>
+                                            <span class="remove-btn" onclick="removeFromTable(${gid}, ${table.id})">✕</span>
+                                        </div>
+                                    ` : '';
+                                }).join('')
+                            }
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Drag and Drop
+        let draggedGuestId = null;
+
+        function dragGuest(event, guestId) {
+            draggedGuestId = guestId;
+            event.target.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+        }
+
+        function dragEnd(event) {
+            event.target.classList.remove('dragging');
+            draggedGuestId = null;
+        }
+
+        function dragOver(event) {
+            event.preventDefault();
+            event.currentTarget.classList.add('drag-over');
+        }
+
+        function dragLeave(event) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+
+        function dropGuest(event, tableId) {
+            event.preventDefault();
+            event.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedGuestId) return;
+            
+            const table = tables.find(t => t.id === tableId);
+            if (table && table.guests.length < table.capacity) {
+                const guest = guests.find(g => g.id === draggedGuestId);
+                if (guest) {
+                    guest.tableId = tableId;
+                    if (!table.guests.includes(draggedGuestId)) {
+                        table.guests.push(draggedGuestId);
+                    }
+                    saveData();
+                    showToast(`已将 ${guest.name} 安排到 ${table.name}`);
+                }
+            } else {
+                showToast('该桌已满！');
+            }
+        }
+
+        function removeFromTable(guestId, tableId) {
+            const guest = guests.find(g => g.id === guestId);
+            const table = tables.find(t => t.id === tableId);
+            
+            if (guest) guest.tableId = null;
+            if (table) table.guests = table.guests.filter(id => id !== guestId);
+            
+            saveData();
+            showToast(`已将 ${guest.name} 移回待安排`);
+        }
+
+        // Modal
+        function openModal(type) {
+            document.getElementById(`${type}Modal`).classList.add('active');
+            if (type === 'guest') {
+                document.getElementById('guestForm').reset();
+            } else {
+                document.getElementById('tableForm').reset();
+            }
+        }
+
+        function closeModal(type) {
+            document.getElementById(`${type}Modal`).classList.remove('active');
+        }
+
+        // Save guest
+        function saveGuest(event) {
+            event.preventDefault();
+            const form = event.target;
+            const name = form.name.value.trim();
+            const phone = form.phone.value.trim();
+            const note = form.note.value.trim();
+            
+            if (!name) return;
+            
+            const newGuest = {
+                id: Date.now(),
+                name,
+                phone,
+                note,
+                tableId: null
+            };
+            
+            guests.push(newGuest);
+            saveData();
+            closeModal('guest');
+            showToast(`已添加宾客: ${name}`);
+        }
+
+        // Edit guest
+        function editGuest(id) {
+            const guest = guests.find(g => g.id === id);
+            if (!guest) return;
+            
+            const newName = prompt('请输入姓名:', guest.name);
+            if (newName === null) return;
+            
+            const newPhone = prompt('请输入手机号:', guest.phone || '');
+            const newNote = prompt('请输入备注:', guest.note || '');
+            
+            guest.name = newName.trim();
+            guest.phone = newPhone ? newPhone.trim() : '';
+            guest.note = newNote ? newNote.trim() : '';
+            
+            saveData();
+            showToast(`已更新宾客: ${guest.name}`);
+        }
+
+        // Delete guest
+        function deleteGuest(id) {
+            if (!confirm('确定要删除该宾客吗？')) return;
+            
+            const guest = guests.find(g => g.id === id);
+            guests = guests.filter(g => g.id !== id);
+            
+            // Remove from table
+            tables.forEach(t => {
+                t.guests = t.guests.filter(gid => gid !== id);
+            });
+            
+            saveData();
+            showToast(`已删除宾客: ${guest?.name || ''}`);
+        }
+
+        // Save table
+        function saveTable(event) {
+            event.preventDefault();
+            const form = event.target;
+            const name = form.name.value.trim();
+            const capacity = parseInt(form.capacity.value);
+            
+            if (!name || !capacity) return;
+            
+            const newTable = {
+                id: Date.now(),
+                name,
+                capacity,
+                guests: []
+            };
+            
+            tables.push(newTable);
+            saveData();
+            closeModal('table');
+            showToast(`已添加桌位: ${name}`);
+        }
+
+        // Export data
+        function exportData() {
+            const data = { guests, tables };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `婚礼排座_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('数据已导出');
+        }
+
+        // Import data
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.guests && data.tables) {
+                        guests = data.guests;
+                        tables = data.tables;
+                        saveData();
+                        showToast('数据导入成功');
+                    } else {
+                        showToast('文件格式不正确');
+                    }
+                } catch (err) {
+                    showToast('文件解析失败');
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        // Batch import from CSV (format: 姓名,手机号,备注)
+        function batchImport(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split('\n').filter(line => line.trim());
+                    
+                    let importedCount = 0;
+                    
+                    lines.forEach((line, index) => {
+                        // Skip header if it contains "姓名" or "name"
+                        if (index === 0 && (line.includes('姓名') || line.toLowerCase().includes('name'))) return;
+                        
+                        // Parse CSV line (handle both Chinese and English commas)
+                        const parts = line.split(/[,，]/).map(p => p.trim()).filter(p => p);
+                        
+                        if (parts.length >= 1 && parts[0]) {
+                            const newGuest = {
+                                id: Date.now() + index,
+                                name: parts[0],
+                                phone: parts[1] || '',
+                                note: parts[2] || '',
+                                tableId: null
+                            };
+                            guests.push(newGuest);
+                            importedCount++;
+                        }
+                    });
+                    
+                    saveData();
+                    showToast(`成功导入 ${importedCount} 位宾客`);
+                } catch (err) {
+                    showToast('CSV解析失败，请检查格式');
+                }
+            };
+            reader.readAsText(file);
+            input.value = '';
+        }
+
+        // Export to PDF
+        function exportPDF() {
+            // Create print-friendly content
+            const printWindow = window.open('', '_blank');
+            
+            const date = new Date().toLocaleDateString('zh-CN');
+            
+            let tableRows = tables.map(table => {
+                const tableGuests = table.guests.map(gid => {
+                    const g = guests.find(x => x.id === gid);
+                    return g ? `<li>${g.name}${g.note ? ' (' + g.note + ')' : ''}</li>` : '';
+                }).join('');
+                
+                return `
+                    <tr>
+                        <td><strong>${table.name}</strong><br><small>${table.guests.length}/${table.capacity}人</small></td>
+                        <td><ul>${tableGuests || '<li>未安排</li>'}</ul></td>
+                    </tr>
+                `;
+            }).join('');
+
+            const unseatedList = guests.filter(g => !g.tableId).map(g => 
+                `<li>${g.name}${g.phone ? ' (' + g.phone + ')' : ''}</li>`
+            ).join('');
+
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>婚礼宴席排座表 - ${date}</title>
+                    <style>
+                        body { font-family: 'Microsoft YaHei', sans-serif; padding: 40px; }
+                        h1 { text-align: center; color: #333; margin-bottom: 10px; }
+                        .date { text-align: center; color: #666; margin-bottom: 30px; }
+                        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+                        th { background: #f5f5f5; }
+                        ul { margin: 0; padding-left: 20px; }
+                        li { margin: 4px 0; }
+                        .unseated { background: #fff3cd; padding: 15px; border-radius: 8px; }
+                        .unseated h3 { margin-top: 0; color: #856404; }
+                        @media print { body { padding: 20px; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>💒 婚礼宴席排座表</h1>
+                    <p class="date">${date} | 总宾客: ${guests.length}人 | 已安排: ${tables.reduce((s,t) => s + t.guests.length, 0)}人</p>
+                    
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 30%">桌号</th>
+                                <th>宾客名单</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                    
+                    ${unseatedList ? `
+                        <div class="unseated">
+                            <h3>📋 待安排宾客 (${guests.filter(g => !g.tableId).length}人)</h3>
+                            <ul>${unseatedList}</ul>
+                        </div>
+                    ` : ''}
+                    
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                        }
+                    <\/script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            showToast('PDF导出中...');
+        }
+
+        // Clear all
+        function clearAll() {
+            if (!confirm('确定要清空所有数据吗？此操作不可恢复！')) return;
+            
+            guests = [];
+            tables = [
+                { id: 1, name: '1号桌', capacity: 10, guests: [] },
+                { id: 2, name: '2号桌', capacity: 10, guests: [] },
+                { id: 3, name: '3号桌', capacity: 10, guests: [] }
+            ];
+            saveData();
+            showToast('数据已清空');
+        }
+
+        // Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Init
+        loadData();
+    </script>
+</body>
+</html>
