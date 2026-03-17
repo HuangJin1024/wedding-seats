@@ -823,15 +823,15 @@
             input.value = '';
         }
 
-        // Download import template
+        // Download import template (with UTF-8 BOM for Excel compatibility)
         function downloadTemplate() {
-            const template = `姓名,手机号,备注
+            const template = `\uFEFF姓名,手机号,备注
 张三,13800138000,新郎朋友
 李四,13900139000,新娘同事
 王五,,亲戚
 赵六,13700137000,新郎同学`;
             
-            const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -847,35 +847,65 @@
             if (!file) return;
             
             const reader = new FileReader();
+            
+            // Try UTF-8 first
+            reader.readAsText(file, 'UTF-8');
+            
             reader.onload = function(e) {
                 try {
-                    const text = e.target.result;
-                    const lines = text.split('\n').filter(line => line.trim());
+                    let text = e.target.result;
                     
-                    let importedCount = 0;
+                    // If the text looks garbled (contains replacement chars), try GBK
+                    if (text.includes('\uFFFD') || (!text.includes('姓名') && !text.includes('张三'))) {
+                        // Retry with GBK
+                        const readerGBK = new FileReader();
+                        readerGBK.readAsText(file, 'GBK');
+                        readerGBK.onload = function(e2) {
+                            processImport(e2.target.result);
+                        };
+                        readerGBK.onerror = function() {
+                            showToast('文件读取失败');
+                        };
+                    } else {
+                        processImport(text);
+                    }
+                } catch (err) {
+                    showToast('文件解析失败: ' + err.message);
+                }
+            };
+            
+            reader.onerror = function() {
+                showToast('文件读取失败');
+            };
+            
+            function processImport(text) {
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                let importedCount = 0;
+                
+                lines.forEach((line, index) => {
+                    // Skip header if it contains "姓名" or "name"
+                    if (index === 0 && (line.includes('姓名') || line.toLowerCase().includes('name'))) return;
                     
-                    lines.forEach((line, index) => {
-                        // Skip header if it contains "姓名" or "name"
-                        if (index === 0 && (line.includes('姓名') || line.toLowerCase().includes('name'))) return;
-                        
-                        // Parse CSV line (handle both Chinese and English commas)
-                        const parts = line.split(/[,，]/).map(p => p.trim()).filter(p => p);
-                        
-                        if (parts.length >= 1 && parts[0]) {
-                            const newGuest = {
-                                id: Date.now() + index,
-                                name: parts[0],
-                                phone: parts[1] || '',
-                                note: parts[2] || '',
-                                tableId: null
-                            };
-                            guests.push(newGuest);
-                            importedCount++;
-                        }
-                    });
+                    // Parse CSV line (handle both Chinese and English commas)
+                    const parts = line.split(/[,，]/).map(p => p.trim()).filter(p => p);
                     
-                    saveData();
-                    showToast(`成功导入 ${importedCount} 位宾客`);
+                    if (parts.length >= 1 && parts[0]) {
+                        const newGuest = {
+                            id: Date.now() + index,
+                            name: parts[0],
+                            phone: parts[1] || '',
+                            note: parts[2] || '',
+                            tableId: null
+                        };
+                        guests.push(newGuest);
+                        importedCount++;
+                    }
+                });
+                
+                saveData();
+                showToast(`成功导入 ${importedCount} 位宾客`);
+            }
                 } catch (err) {
                     showToast('CSV解析失败，请检查格式');
                 }
